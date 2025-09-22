@@ -1,18 +1,16 @@
-import './App.css'
+// frontend/src/App.jsx
+
+import SeriesSelector from './components/SeriesSelector';
+import './App.css'; // Mantemos o CSS para estilizações futuras
 
 function App() {
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>Mobile-First Series</h1>
-        <p>Seu Guia de Séries Personalizado</p>
+    <div className="App">
+      <header className="App-header">
+        <SeriesSelector />
       </header>
-      <main className="app-content">
-        {/* Futuramente, aqui entrarão os componentes de seleção de séries */}
-        <h2>Em construção...</h2>
-      </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
