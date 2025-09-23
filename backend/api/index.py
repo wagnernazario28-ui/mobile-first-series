@@ -1,85 +1,92 @@
-from flask import Flask, jsonify, request
+import os
+import requests
+from flask import Flask, request, jsonify
+from dotenv import load_dotenv
 from flask_cors import CORS
+from collections import defaultdict
 
-# --- INICIALIZAÇÃO DA APLICAÇÃO FLASK ---
+load_dotenv()
+
 app = Flask(__name__)
-# Habilita o CORS para permitir que o front-end (em outro domínio) acesse esta API.
-# Isso é essencial para a comunicação entre Vercel (front-end) e Render (back-end).
 CORS(app)
 
-# --- BANCO DE DADOS MOCK (EM MEMÓRIA) ---
-# No futuro, isso virá de um banco de dados real. Por agora, vamos usar os
-# mesmos dados do protótipo para garantir consistência.
+TMDB_API_KEY = os.getenv('TMDB_API_KEY')
+TMDB_API_URL = "https://api.themoviedb.org/3"
 
-initial_titles = [
-    { "id": 1, "title": "Breaking Bad", "type": 'Série', "service": 'netflix', "genres": ["Drama", "Suspense", "Criminal"], "img": "https://placehold.co/200x300/111/FFFFFF?text=Breaking+Bad" },
-    { "id": 11, "title": "O Poderoso Chefão", "type": 'Filme', "service": 'prime', "genres": ["Drama", "Criminal"], "img": "https://placehold.co/200x300/111/FFFFFF?text=O+Poderoso+Chefão" },
-    { "id": 3, "title": "Chernobyl", "type": 'Série', "service": 'max', "genres": ["Drama", "Fatos Reais"], "img": "https://placehold.co/200x300/111/FFFFFF?text=Chernobyl" },
-    { "id": 4, "title": "Mindhunter", "type": 'Série', "service": 'netflix', "genres": ["Suspense", "Criminal", "Investigação"], "img": "https://placehold.co/200x300/111/FFFFFF?text=Mindhunter" },
-    { "id": 5, "title": "Game of Thrones", "type": 'Série', "service": 'max', "genres": ["Fantasia", "Aventura"], "img": "https://placehold.co/200x300/111/FFFFFF?text=GoT" },
-    { "id": 12, "title": "Vingadores: Ultimato", "type": 'Filme', "service": 'disney', "genres": ["Ação", "Aventura", "Ficção Científica"], "img": "https://placehold.co/200x300/111/FFFFFF?text=Ultimato" },
-    { "id": 8, "title": "Stranger Things", "type": 'Série', "service": 'netflix', "genres": ["Fantasia", "Ficção Científica"], "img": "https://placehold.co/200x300/111/FFFFFF?text=Stranger" },
-    { "id": 13, "title": "Ted Lasso", "type": 'Série', "service": 'apple', "genres": ["Comédia", "Drama"], "img": "https://placehold.co/200x300/111/FFFFFF?text=Ted+Lasso" }
-]
+def format_title_data(item):
+    """Função auxiliar para formatar os dados de um título consistentemente."""
+    poster_path = f"https://image.tmdb.org/t/p/w500{item.get('poster_path')}" if item.get('poster_path') else "https://placehold.co/200x300/111/FFFFFF?text=Sem+Imagem"
+    return {
+        'id': item.get('id'),
+        'title': item.get('name'),
+        'img': poster_path,
+        'type': 'Série',
+        'service': 'netflix' # Temporariamente fixo
+    }
 
-all_suggestions = [
-    { "id": 101, "title": "Peaky Blinders", "service": 'netflix', "type": 'Série', "synopsis": "Uma notória gangue em Birmingham, Inglaterra, de 1919, é liderada pelo cruel Tommy Shelby...", "trailer_url": "https://www.youtube.com/watch?v=oVzVdvGUn_4", "genres": ["Criminal", "Drama"], "img": "https://placehold.co/600x400/111/FFFFFF?text=Peaky+Blinders" },
-    { "id": 104, "title": "Dark", "service": 'netflix', "type": 'Série', "synopsis": "O desaparecimento de duas crianças em uma cidade alemã expõe os relacionamentos fraturados...", "trailer_url": "https://www.youtube.com/watch?v=ESEUoa-P_24", "genres": ["Suspense", "Ficção Científica"], "img": "https://placehold.co/600x400/111/FFFFFF?text=Dark" },
-    { "id": 105, "title": "The Mandalorian", "service": 'disney', "type": 'Série', "synopsis": "Após a queda do Império, um caçador de recompensas Mandaloriano solitário navega pelos confins da galáxia...", "trailer_url": "https://www.youtube.com/watch?v=aOC8E8z_ifw", "genres": ["Ficção Científica", "Aventura"], "img": "https://placehold.co/600x400/111/FFFFFF?text=The+Mandalorian" },
-    { "id": 109, "title": "Parasita", "service": 'prime', "type": 'Filme', "synopsis": "Toda a família de Ki-taek está desempregada. Por obra do acaso, ele começa a dar aulas de inglês para uma garota de família rica...", "trailer_url": "https://www.youtube.com/watch?v=m4rc3_b0_gQ", "genres": ["Suspense", "Drama", "Comédia"], "img": "https://placehold.co/600x400/111/FFFFFF?text=Parasita" },
-    { "id": 113, "title": "Ruptura", "service": 'apple', "type": 'Série', "synopsis": "Mark lidera uma equipe de funcionários de escritório cujas memórias foram cirurgicamente divididas...", "trailer_url": "https://www.youtube.com/watch?v=xEQP4VVuyrY", "genres": ["Suspense", "Ficção Científica", "Drama"], "img": "https://placehold.co/600x400/111/FFFFFF?text=Ruptura" },
-    { "id": 114, "title": "O Urso", "service": 'disney', "type": 'Série', "synopsis": "Um jovem chef de cozinha de alta gastronomia retorna a Chicago para administrar a lanchonete de sua família.", "genres": ["Comédia", "Drama"], "img": "https://placehold.co/600x400/111/FFFFFF?text=O+Urso" },
-    { "id": 115, "title": "Duna", "service": 'max', "type": 'Filme', "synopsis": "Paul Atreides, um jovem brilhante e talentoso, deve viajar para o planeta mais perigoso do universo...", "genres": ["Ficção Científica", "Aventura"], "img": "https://placehold.co/600x400/111/FFFFFF?text=Duna" },
-    { "id": 116, "title": "Oppenheimer", "service": 'prime', "type": 'Filme', "synopsis": "A história do físico americano J. Robert Oppenheimer e seu papel no desenvolvimento da bomba atômica.", "genres": ["Fatos Reais", "Drama"], "img": "https://placehold.co/600x400/111/FFFFFF?text=Oppenheimer" },
-]
-
-# --- ROTAS DA API ---
-
-# Rota para buscar a lista inicial de títulos para seleção.
-# Método: GET
-# URL: /api/titles
-@app.route('/api/titles', methods=['GET'])
+@app.route('/api/titles')
 def get_titles():
-    # A função `jsonify` do Flask converte nossa lista Python em uma resposta JSON
-    # que o front-end consegue entender.
-    return jsonify(initial_titles)
+    # Esta função permanece a mesma de antes.
+    if not TMDB_API_KEY:
+        return jsonify({"error": "A chave da API do TMDb não foi configurada."}), 500
+    try:
+        endpoint = f"{TMDB_API_URL}/discover/tv"
+        params = {
+            'api_key': TMDB_API_KEY, 'language': 'pt-BR', 'sort_by': 'popularity.desc',
+            'with_watch_providers': '8|9|337|119', 'watch_region': 'BR', 'page': 1
+        }
+        response = requests.get(endpoint, params=params)
+        response.raise_for_status()
+        data = response.json()
+        formatted_titles = [format_title_data(item) for item in data.get('results', [])]
+        return jsonify({"titles": formatted_titles})
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Erro ao contatar a API do TMDb: {e}"}), 503
+    except Exception as e:
+        return jsonify({"error": f"Ocorreu um erro inesperado: {e}"}), 500
 
-# Rota para receber as preferências do usuário e retornar sugestões.
-# Método: POST
-# URL: /api/suggestions
 @app.route('/api/suggestions', methods=['POST'])
 def get_suggestions():
-    # Pega os dados JSON enviados pelo front-end no corpo da requisição.
-    data = request.get_json()
+    if not TMDB_API_KEY:
+        return jsonify({"error": "A chave da API do TMDb não foi configurada."}), 500
 
-    # Validação básica para garantir que os dados foram enviados corretamente.
-    if not data or 'selected_ids' not in data:
-        # Se os IDs não forem enviados, retorna um erro com status HTTP 400 (Bad Request).
-        return jsonify({"error": "O campo 'selected_ids' é obrigatório."}), 400
+    selected_ids = request.json.get('selected_ids', [])
+    if not selected_ids:
+        return jsonify({"error": "Nenhum ID foi selecionado."}), 400
 
-    selected_ids = data['selected_ids']
+    try:
+        all_recommendations = []
+        # Para cada série que o usuário escolheu...
+        for series_id in selected_ids:
+            # ...buscamos as recomendações diretas para ela.
+            rec_endpoint = f"{TMDB_API_URL}/tv/{series_id}/recommendations"
+            params = {'api_key': TMDB_API_KEY, 'language': 'pt-BR'}
+            response = requests.get(rec_endpoint, params=params)
+            response.raise_for_status()
+            data = response.json()
+            all_recommendations.extend(data.get('results', []))
 
-    # Lógica de Sugestão (idêntica à do protótipo):
-    # 1. Cria um conjunto (set) para armazenar os gêneros favoritos do usuário de forma única.
-    user_taste_profile = set()
-    for title in initial_titles:
-        if title['id'] in selected_ids:
-            # O método `update` adiciona todos os itens de uma lista ao conjunto.
-            user_taste_profile.update(title['genres'])
-
-    # 2. Filtra a lista de todas as sugestões com base nos gêneros favoritos.
-    suggestions = []
-    for suggestion in all_suggestions:
-        # Verifica se algum gênero da sugestão está no perfil de gosto do usuário.
-        # `any()` retorna True se qualquer item na sequência for verdadeiro.
-        tem_genero_em_comum = any(genre in user_taste_profile for genre in suggestion['genres'])
-        
-        if tem_genero_em_comum:
-            suggestions.append(suggestion)
+        # Agora, contamos e ranqueamos as sugestões
+        ranked_suggestions = defaultdict(lambda: {'count': 0, 'data': None})
+        for item in all_recommendations:
+            item_id = item.get('id')
+            # Ignoramos sugestões que o usuário já escolheu
+            if item_id in selected_ids:
+                continue
             
-    return jsonify(suggestions)
+            ranked_suggestions[item_id]['count'] += 1
+            if ranked_suggestions[item_id]['data'] is None:
+                ranked_suggestions[item_id]['data'] = format_title_data(item)
+        
+        # Ordenamos os resultados pela contagem (mais recomendados primeiro)
+        sorted_suggestions = sorted(ranked_suggestions.values(), key=lambda x: x['count'], reverse=True)
+        
+        # Extraímos apenas os dados formatados para enviar ao front-end
+        final_list = [item['data'] for item in sorted_suggestions]
+        
+        return jsonify(final_list)
 
-# Esta é a rota raiz, podemos mantê-la para testes simples.
-@app.route('/')
-def home():
-    return 'API do Mobile-First Series está no ar!'
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Erro ao contatar a API do TMDb: {e}"}), 503
+    except Exception as e:
+        return jsonify({"error": f"Ocorreu um erro inesperado: {e}"}), 500

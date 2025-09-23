@@ -83,23 +83,46 @@ body {
 /* Rodapé Fixo */
 .sticky-footer { margin-top: auto; background: #18181b; padding: 1.5rem 1rem 1rem 1rem; border-top: 1px solid #27272a; }
 
-/* Carrossel */
-.carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; padding-left: 1.5rem; padding-right: 1.5rem; margin-left: -1.5rem; margin-right: -1.5rem; scroll-behavior: smooth; }
-.carousel::-webkit-scrollbar { display: none; }
-.carousel-item { flex: 0 0 90%; scroll-snap-align: center; margin-right: 1rem; cursor: pointer; }
-
 /* Grid de Catálogo */
 .catalog-card { position: relative; transition: all 0.3s ease-in-out; opacity: 1; transform: scale(1); cursor: pointer; }
 .catalog-card.removing { opacity: 0; transform: scale(0.95); }
 
-/* Modal de Detalhes */
-.modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.8); z-index: 50; display: flex; align-items: flex-end; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; }
-.modal-overlay.visible { opacity: 1; visibility: visible; }
-.modal-panel { background-color: #18181b; width: 100%; max-height: 90%; border-top-left-radius: 1.5rem; border-top-right-radius: 1.5rem; transform: translateY(100%); transition: transform 0.3s ease; position: relative; overflow: hidden; }
-.modal-overlay.visible .modal-panel { transform: translateY(0); }
-.modal-backdrop { position: absolute; top: 0; left: 0; right: 0; height: 50%; background-size: cover; background-position: center 20%; }
-.modal-backdrop::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to top, #18181b 10%, transparent 80%); }
+/* --- CÓDIGO DA ANIMAÇÃO DE CARREGAMENTO ADICIONADO ABAIXO --- */
 
-/* Toast de Confirmação */
-.confirmation-toast { position: absolute; bottom: -100%; left: 1rem; right: 1rem; background-color: #27272a; border-top: 1px solid #3f3f46; padding: 1rem; border-radius: 0.75rem; z-index: 60; transition: bottom 0.3s ease-in-out; box-shadow: 0 -5px 20px rgba(0,0,0,0.3); }
-.confirmation-toast.visible { bottom: 1rem; }
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(12, 10, 9, 0.9);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 6px solid #4a4a4a;
+  border-top-color: #3b82f6;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loading-text {
+  font-weight: 500;
+  color: #d1d5db; /* text-gray-300 */
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
