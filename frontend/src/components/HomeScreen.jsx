@@ -7,7 +7,21 @@ import DetailsModal from './DetailsModal';
 
 const TMDB_LOGO_URL = 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg';
 
-// ================== ALTERAÇÃO 1: RECEBER NOVA PROP ==================
+// ================== ALTERAÇÃO 1: DEFINIR FILTROS E NOMES ==================
+// Mapeamento de identificadores para nomes de exibição dos serviços.
+const serviceNames = {
+    'all': 'Todos',
+    'netflix': 'Netflix',
+    'prime': 'Prime Video',
+    'disney': 'Disney+',
+    'max': 'Max',
+    'apple': 'Apple TV+',
+    'globoplay': 'Globoplay'
+};
+// A ordem em que os botões de filtro aparecerão na tela.
+const filterOrder = ['all', 'netflix', 'prime', 'disney', 'max', 'apple', 'globoplay'];
+
+
 function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -18,6 +32,9 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
     const [selectedTitle, setSelectedTitle] = useState(null);
     const [detailsData, setDetailsData] = useState(null);
     const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+    
+    // ================== ALTERAÇÃO 2: ESTADO PARA O FILTRO ATIVO ==================
+    const [activeFilter, setActiveFilter] = useState('all'); // 'all' é o padrão.
 
     useEffect(() => {
         const fetchSuggestions = async () => {
@@ -41,15 +58,11 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
                 setError(err.message);
             } finally {
                 setLoading(false);
-                // ================== ALTERAÇÃO 2: AVISAR QUE TERMINOU ==================
-                // Chamamos a função para notificar o App.jsx que o carregamento
-                // inicial foi concluído, seja com sucesso ou erro.
                 onInitialLoadComplete();
-                // =====================================================================
             }
         };
         fetchSuggestions();
-    }, [selectedIds]);
+    }, [selectedIds, onInitialLoadComplete]);
 
     const handleCardClick = async (item) => {
         setSelectedTitle(item);
@@ -77,18 +90,29 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         setDetailsData(null);
     };
     
+    // ================== ALTERAÇÃO 3: CORREÇÃO DO BUG DE POSICIONAMENTO ==================
     const handleWatchedClick = (item, event) => {
         const cardElement = event.currentTarget.closest('.catalog-card');
         if (cardElement && screenRef.current) {
-            const cardRect = cardElement.getBoundingClientRect();
             const screenRect = screenRef.current.getBoundingClientRect();
+            const cardRect = cardElement.getBoundingClientRect();
+            
+            // AQUI ESTÁ A CORREÇÃO CRUCIAL:
+            // Somamos a posição do card relativa à janela (cardRect.top) com a
+            // quantidade que a tela já foi rolada (screenRef.current.scrollTop).
+            // Subtraímos screenRect.top para normalizar a posição relativa ao contêiner.
+            const scrollTop = screenRef.current.scrollTop;
+            const finalTop = cardRect.bottom - screenRect.top + scrollTop;
+
             setToastPosition({
-                top: cardRect.bottom - screenRect.top + 8, left: cardRect.left - screenRect.left,
+                top: finalTop + 8, // 8px de margem
+                left: cardRect.left - screenRect.left,
                 width: cardRect.width,
             });
             setItemToConfirm(item);
         }
     };
+    
     const handleConfirmWatched = () => {
         if (!itemToConfirm) return;
         setSuggestions(prev => prev.filter(s => s.id !== itemToConfirm.id));
@@ -98,9 +122,13 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         setItemToConfirm(null);
     };
 
+    // ================== ALTERAÇÃO 4: LÓGICA DE FILTRAGEM ==================
+    // Filtra a lista de sugestões com base no filtro ativo, antes de renderizar.
+    const filteredSuggestions = activeFilter === 'all'
+        ? suggestions
+        : suggestions.filter(item => item.service === activeFilter);
+
     if (loading) {
-        // Mantemos este loading interno para recarregamentos (ex: refinar gosto),
-        // mas o loading inicial será controlado pelo App.jsx.
         return <div className="flex justify-center items-center h-full text-white">Carregando sugestões...</div>;
     }
 
@@ -109,24 +137,43 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
     return (
         <div ref={screenRef} className="scrollable-content relative h-full">
             <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-bold text-white">Sua Home</h2>
                     <button onClick={onRefine} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-3 rounded-full">
                         Refinar Gosto
                     </button>
                 </div>
+
+                {/* ================== ALTERAÇÃO 5: RENDERIZAÇÃO DOS BOTÕES DE FILTRO ================== */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                    {filterOrder.map(filterKey => (
+                        <button 
+                            key={filterKey}
+                            onClick={() => setActiveFilter(filterKey)}
+                            className={`service-filter-btn font-semibold py-1 px-3 rounded-full ${activeFilter === filterKey ? 'active' : ''}`}
+                        >
+                            {serviceNames[filterKey]}
+                        </button>
+                    ))}
+                </div>
+
                 <h3 className="text-lg font-bold text-white mb-4">Recomendado para Você</h3>
                 
-                {suggestions.length === 0 ? (
+                {filteredSuggestions.length === 0 ? (
                     <div className="text-center text-slate-400 py-10">
-                        <p>Não encontramos sugestões com base na sua seleção.</p>
-                        <p className="mt-2">Tente refinar seu gosto com outros títulos.</p>
+                        <p>
+                            {suggestions.length > 0
+                                ? `Nenhuma sugestão encontrada para o filtro "${serviceNames[activeFilter]}".`
+                                : "Não encontramos sugestões com base na sua seleção."
+                            }
+                        </p>
+                        <p className="mt-2">Tente refinar seu gosto ou selecionar outro filtro.</p>
                     </div>
                 ) : (
                     <div id="catalog-grid" className="grid grid-cols-2 gap-4">
-                        {suggestions.map(item => (
+                        {filteredSuggestions.map(item => (
                             <SuggestionCard 
-                                key={item.id} 
+                                key={`${item.id}-${item.service}`}
                                 item={item} 
                                 onWatchedClick={handleWatchedClick}
                                 onCardClick={handleCardClick}

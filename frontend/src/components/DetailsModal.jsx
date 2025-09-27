@@ -1,8 +1,8 @@
 // frontend/src/components/DetailsModal.jsx
 
-import React from 'react';
+import React, { useEffect } from 'react'; // 1. IMPORTAMOS O 'useEffect'
 
-// Componente para o Spinner de Carregamento
+// Componente para o Spinner de Carregamento (sem alterações)
 const LoadingSpinner = () => (
     <div className="flex justify-center items-center h-full">
         <div className="spinner"></div>
@@ -10,32 +10,47 @@ const LoadingSpinner = () => (
 );
 
 function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle }) {
+
+    // ================== ALTERAÇÃO PRINCIPAL: TRAVA DE ROLAGEM ==================
+    // Usamos o useEffect para criar um "efeito colateral" que observa a
+    // propriedade 'isVisible'.
+    useEffect(() => {
+        // Quando o modal estiver visível...
+        if (isVisible) {
+            // ...impedimos a rolagem do conteúdo de fundo.
+            document.body.style.overflow = 'hidden';
+        }
+
+        // A função de "limpeza" do useEffect é executada quando o componente
+        // é desmontado ou quando a dependência ('isVisible') muda.
+        // Isso garante que a rolagem sempre seja reativada.
+        return () => {
+            document.body.style.overflow = 'unset'; // 'unset' restaura o valor padrão do CSS.
+        };
+    }, [isVisible]); // O array de dependências garante que este efeito só rode quando 'isVisible' mudar.
+    // ========================================================================
+
     if (!isVisible || !baseTitle) {
         return null;
     }
 
-    // Define as classes para a transição de entrada e saída
     const overlayClasses = isVisible
         ? "modal-overlay visible"
         : "modal-overlay";
 
-    // Monta a URL do trailer apenas se a chave existir
     const trailerUrl = details?.trailer_key
         ? `https://www.youtube.com/watch?v=${details.trailer_key}`
         : null;
 
     return (
         <div className={overlayClasses} onClick={onClose}>
-            {/* Usamos stopPropagation para que o clique dentro do painel não feche o modal */}
             <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
 
-                {/* Fundo com a imagem do título */}
                 <div
                     className="modal-backdrop"
                     style={{ backgroundImage: `url(${details?.backdrop_img || baseTitle.img})` }}
                 ></div>
 
-                {/* Botão para fechar */}
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-white bg-black/50 rounded-full w-8 h-8 flex items-center justify-center z-20 hover:bg-black/80 transition-colors"
@@ -44,19 +59,15 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle }) {
                 </button>
 
                 <div className="relative z-10 p-6 pt-48 text-left">
-                    {/* Título Principal */}
                     <h2 className="text-3xl font-extrabold text-white mb-2">{baseTitle.title}</h2>
 
-                    {/* Conteúdo do Modal */}
                     {isLoading ? (
                         <LoadingSpinner />
                     ) : !details ? (
-                        // Mensagem de erro que você solicitou
                         <p className="text-slate-300 text-center py-8">
                             Desculpe, não encontrei as informações desse título.
                         </p>
                     ) : (
-                        // Detalhes carregados
                         <>
                             <div className="flex items-center gap-4 mb-4 flex-wrap">
                                 <span className="text-sm text-slate-400">{details.genres.join(' · ')}</span>
