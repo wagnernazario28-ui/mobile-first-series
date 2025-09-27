@@ -319,7 +319,7 @@ def get_title_details(media_type, title_id):
     if not TMDB_API_KEY: return jsonify({"error": "A chave da API do TMDb não foi configurada."}), 500
     if media_type not in ['tv', 'movie']: return jsonify({"error": "Tipo de mídia inválido."}), 400
     try:
-        endpoint = f"{TMDB_API_URL}/tv/{title_id}"
+        endpoint = f"{TMDB_API_URL}/tv/{title_id}" if media_type == 'tv' else f"{TMDB_API_URL}/movie/{title_id}"
         params = {'api_key': TMDB_API_KEY, 'language': 'pt-BR', 'append_to_response': 'credits,videos'}
         response = requests.get(endpoint, params=params)
         response.raise_for_status()
@@ -329,7 +329,20 @@ def get_title_details(media_type, title_id):
         cast = [a['name'] for a in details_data.get('credits', {}).get('cast', [])[:5]]
         trailer_key = next((v['key'] for v in details_data.get('videos', {}).get('results', []) if v['site'] == 'YouTube' and v['type'] == 'Trailer'), None)
         backdrop_img = f"{tmdb_config['base_url']}w780{details_data.get('backdrop_path')}" if details_data.get('backdrop_path') else None
-        return jsonify({'synopsis': synopsis, 'genres': genres, 'cast': cast, 'trailer_key': trailer_key, 'backdrop_img': backdrop_img})
+        
+        # Adicionando informações específicas para séries
+        number_of_seasons = None
+        if media_type == 'tv':
+            number_of_seasons = details_data.get('number_of_seasons')
+        
+        return jsonify({
+            'synopsis': synopsis, 
+            'genres': genres, 
+            'cast': cast, 
+            'trailer_key': trailer_key, 
+            'backdrop_img': backdrop_img,
+            'number_of_seasons': number_of_seasons
+        })
     except Exception as e: return jsonify({"error": "Não foi possível buscar os detalhes."}), 500
 
 @app.route('/api/background-titles')

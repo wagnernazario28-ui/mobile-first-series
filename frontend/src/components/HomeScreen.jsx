@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import SuggestionCard from './SuggestionCard';
 import DetailsModal from './DetailsModal';
 
-const TMDB_LOGO_URL = 'https://www.themovied.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg';
+const TMDB_LOGO_URL = 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg';
 
 // Mapeamento de identificadores para nomes de exibição dos serviços.
 const serviceNames = {
@@ -35,6 +35,17 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
     const [page, setPage] = useState(1); // Contador de páginas
     const [isFetching, setIsFetching] = useState(false); // Para evitar múltiplas chamadas simultâneas
     const [processedIds, setProcessedIds] = useState(new Set()); // IDs que foram marcados como "Já Vi" ou "Não Gostei"
+    
+    // Recuperar IDs marcados como "Já Vi" ou "Não Gostei" do localStorage
+    useEffect(() => {
+        const watchedOrDislikedIds = JSON.parse(localStorage.getItem('watchedOrDislikedIds') || '[]');
+        setProcessedIds(new Set(watchedOrDislikedIds));
+    }, []);
+
+    // Atualizar o localStorage sempre que processedIds mudar
+    useEffect(() => {
+        localStorage.setItem('watchedOrDislikedIds', JSON.stringify(Array.from(processedIds)));
+    }, [processedIds]);
 
     // Função para buscar sugestões (tanto inicial quanto adicionais)
     const fetchSuggestions = async (pageNum = 1, append = false) => {
@@ -73,13 +84,22 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
             if (append) {
                 setSuggestions(prev => [...prev, ...filteredSuggestions]);
             } else {
-                setSuggestions(filteredSuggestions);
+                // Garantir que mantenhamos as sugestões existentes até que as novas sejam carregadas com sucesso
+                // e que não substituímos com uma lista vazia se a anterior não estava vazia
+                if (pageNum === 1 && !append && filteredSuggestions.length === 0 && suggestions.length > 0) {
+                    // Mantém as sugestões atuais se a nova chamada retornar vazia mas tínhamos dados antes
+                    console.warn("A API retornou uma lista vazia, mantendo as sugestões atuais.");
+                } else {
+                    setSuggestions(filteredSuggestions);
+                }
             }
             
             setHasMore(data.has_more);
             setPage(data.current_page);
         } catch (err) {
             setError(err.message);
+            // Em caso de erro, manter as sugestões existentes
+            console.error("Erro ao buscar sugestões:", err);
         } finally {
             if (pageNum === 1 && !append) {
                 setLoading(false);
@@ -127,7 +147,12 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
 
     // Carregar sugestões iniciais
     useEffect(() => {
-        fetchSuggestions(1, false);
+        if (selectedIds && selectedIds.length > 0) {
+            fetchSuggestions(1, false);
+        } else {
+            setLoading(false);
+            setError("Nenhum título foi selecionado para gerar sugestões.");
+        }
     }, [selectedIds, onInitialLoadComplete]);
 
     // Função para carregar mais sugestões quando o usuário rolar
@@ -173,6 +198,7 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
                 setDetailsData(null);
             } else {
                 const data = await response.json();
+                console.log('Dados recebidos da API:', data); // Linha de debug para verificar o conteúdo
                 setDetailsData(data);
             }
         } catch (err) {
@@ -187,11 +213,6 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         setSelectedTitle(null);
         setDetailsData(null);
     };
-
-    // Filtra a lista de sugestões com base no filtro ativo
-    const filteredSuggestions = activeFilter === 'all'
-        ? suggestions
-        : suggestions.filter(item => item.service === activeFilter);
 
     // Funções para lidar com as ações no modal de detalhes
     const handleMarkAsWatched = (item) => {
@@ -223,6 +244,11 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         // Remover o item da lista de sugestões
         setSuggestions(prev => prev.filter(s => s.id !== item.id));
     };
+
+    // Filtra a lista de sugestões com base no filtro ativo
+    const filteredSuggestions = activeFilter === 'all'
+        ? suggestions
+        : suggestions.filter(item => item.service === activeFilter);
 
     if (loading) {
         return <div className="flex justify-center items-center h-full text-white">Carregando sugestões...</div>;
@@ -297,6 +323,7 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
                 isLoading={isDetailsLoading}
                 onMarkAsWatched={handleMarkAsWatched}
                 onDislike={handleDislike}
+                scrollContainerRef={screenRef}
             />
         </div>
     );

@@ -37,7 +37,7 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
     }
 
     const overlayClasses = isVisible
-        ? "fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-0"
+        ? "fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-0 max-h-[100dvh]"
         : "hidden";
 
     const trailerUrl = details?.trailer_key
@@ -55,6 +55,13 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
         try {
             // Adiciona o título atual às preferências do usuário
             onMarkAsWatched(baseTitle);
+            
+            // Adiciona o ID ao localStorage de títulos assistidos
+            const watchedOrDislikedIds = JSON.parse(localStorage.getItem('watchedOrDislikedIds') || '[]');
+            if (!watchedOrDislikedIds.includes(baseTitle.id)) {
+                watchedOrDislikedIds.push(baseTitle.id);
+                localStorage.setItem('watchedOrDislikedIds', JSON.stringify(watchedOrDislikedIds));
+            }
         } catch (error) {
             console.error("Erro ao processar título assistido:", error);
         }
@@ -71,12 +78,20 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
     const handleDislike = () => {
         // Refina o gosto do usuário, indicando que não gostou deste título
         onDislike(baseTitle);
+        
+        // Adiciona o ID ao localStorage de títulos não gostados
+        const watchedOrDislikedIds = JSON.parse(localStorage.getItem('watchedOrDislikedIds') || '[]');
+        if (!watchedOrDislikedIds.includes(baseTitle.id)) {
+            watchedOrDislikedIds.push(baseTitle.id);
+            localStorage.setItem('watchedOrDislikedIds', JSON.stringify(watchedOrDislikedIds));
+        }
+        
         onClose();
     };
 
     return (
         <div className={overlayClasses} onClick={onClose}>
-            <div className="w-full bg-[#18181b] rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-[340px] bg-[#18181b] rounded-t-3xl max-h-[70vh] overflow-hidden flex flex-col mx-auto" onClick={(e) => e.stopPropagation()}>
                 
                 {/* Barra superior com controle de fechamento */}
                 <div className="flex justify-between items-center p-4 bg-[#121212]">
@@ -115,6 +130,9 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
                         <>
                             <div className="flex items-center gap-2 mb-3 flex-wrap">
                                 <span className="text-xs text-slate-400">{details.genres.join(' · ')}</span>
+                                {(details.number_of_seasons || details.number_of_seasons === 0) && (
+                                    <span className="text-xs text-slate-400">· {details.number_of_seasons} Temporada{details.number_of_seasons !== 1 ? 's' : ''}</span>
+                                )}
                             </div>
                             <p className="text-slate-300 text-sm mb-4 max-h-20 overflow-y-auto">
                                 {details.synopsis}
@@ -164,24 +182,24 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
                 
                 {/* Modal de confirmação para "Já Vi" - Estilo mobile otimizado */}
                 {showWatchedConfirmation && (
-                    <div className="absolute inset-0 bg-black/80 z-30 flex items-center p-4">
-                        <div className="bg-[#18181b] rounded-2xl w-full p-5">
-                            <h3 className="text-base font-bold text-white mb-2">Buscar nova recomendação?</h3>
-                            <p className="text-slate-300 text-sm mb-5">
+                    <div className="absolute inset-0 bg-black/80 z-30 flex items-center justify-center p-4">
+                        <div className="bg-[#18181b] rounded-2xl w-full max-w-[340px] mx-auto p-4">
+                            <h3 className="text-sm font-bold text-white mb-2">Buscar nova recomendação?</h3>
+                            <p className="text-slate-300 text-xs mb-4">
                                 Você assistiu a "{baseTitle.title}". Deseja buscar uma nova recomendação baseada nesse título?
                             </p>
                             
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-2 gap-2">
                                 <button
                                     onClick={handleCancelWatched}
-                                    className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-3 px-4 rounded-xl"
+                                    className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-3 rounded-lg text-sm"
                                 >
                                     Não
                                 </button>
                                 <button
                                     onClick={handleConfirmWatched}
                                     disabled={isAddingNewSuggestion}
-                                    className="bg-green-600 hover:bg-green-500 disabled:bg-green-800 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center"
+                                    className="bg-green-600 hover:bg-green-500 disabled:bg-green-800 text-white font-bold py-2 px-3 rounded-lg text-sm flex items-center justify-center"
                                 >
                                     {isAddingNewSuggestion ? (
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
