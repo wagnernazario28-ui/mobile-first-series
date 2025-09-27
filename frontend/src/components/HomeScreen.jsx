@@ -6,6 +6,8 @@ import DetailsModal from './DetailsModal';
 
 const TMDB_LOGO_URL = 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg';
 
+// ================== ALTERAÇÃO 1 ==================
+// Adicionamos os nomes de exibição para os novos serviços.
 const serviceNames = {
     'all': 'Todos',
     'netflix': 'Netflix',
@@ -13,9 +15,35 @@ const serviceNames = {
     'disney': 'Disney+',
     'max': 'Max',
     'apple': 'Apple TV+',
-    'globoplay': 'Globoplay'
+    'globoplay': 'Globoplay',
+    'star+': 'Star+',
+    'paramount+': 'Paramount+',
+    'mubi': 'MUBI',
+    'crunchyroll': 'Crunchyroll',
+    'looke': 'Looke',
+    'telecine': 'Telecine'
 };
-const filterOrder = ['all', 'netflix', 'prime', 'disney', 'max', 'apple', 'globoplay'];
+
+// ================== ALTERAÇÃO 2 ==================
+// Adicionamos os novos identificadores na ordem que queremos
+// que os botões apareçam na tela.
+const filterOrder = [
+    'all', 
+    'netflix', 
+    'prime', 
+    'disney', 
+    'max', 
+    'apple', 
+    'globoplay', 
+    'star+', 
+    'paramount+',
+    'mubi',
+    'crunchyroll',
+    'looke',
+    'telecine'
+];
+// =============================================================
+
 
 function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
     const [suggestions, setSuggestions] = useState([]);
@@ -203,8 +231,6 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         <div className="relative h-full">
             <div ref={screenRef} className="scrollable-content h-full">
                 <div className="p-6">
-                    {/* ================== ALTERAÇÃO PRINCIPAL AQUI ================== */}
-                    {/* O botão "Refinar Gosto" foi removido daqui.                 */}
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-bold text-white">Sua Home</h2>
                     </div>
