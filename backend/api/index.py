@@ -43,28 +43,13 @@ def load_tmdb_configuration():
 load_tmdb_configuration()
 
 # --- Constantes e Funções Auxiliares ---
-
-# ================== ALTERAÇÃO PRINCIPAL AQUI ==================
-# Expandimos o dicionário para incluir todos os principais provedores de
-# streaming (flatrate) disponíveis no Brasil, baseados nos IDs do TMDB.
 STREAMING_PROVIDERS = {
-    8: 'netflix',
-    119: 'prime',
-    337: 'disney',
-    384: 'max',
-    350: 'apple',
-    307: 'globoplay',
-    619: 'star+',          # Adicionado
-    531: 'paramount+',    # Adicionado
-    299: 'mubi',           # Adicionado
-    283: 'crunchyroll',    # Adicionado
-    444: 'looke',          # Adicionado
-    31: 'telecine'        # Adicionado
+    8: 'netflix', 119: 'prime', 337: 'disney',
+    384: 'max', 350: 'apple', 307: 'globoplay',
+    619: 'star+', 531: 'paramount+', 299: 'mubi',
+    283: 'crunchyroll', 444: 'looke', 31: 'telecine'
 }
-# A string abaixo agora será gerada dinamicamente com todos os novos IDs.
 WATCH_PROVIDERS_STRING = '|'.join(map(str, STREAMING_PROVIDERS.keys()))
-# =============================================================
-
 MINIMUM_SUGGESTIONS_TARGET = 30
 
 def get_title_service(watch_providers):
@@ -89,19 +74,46 @@ def format_title_data(item, type_override=None, service_override=None):
     
     return {'id': item.get('id'), 'title': title, 'img': full_poster_path, 'type': media_type, 'service': service}
 
-# --- Rotas da API (sem alteração na lógica, apenas se beneficiam da nova lista) ---
+# --- Rotas da API ---
 
+# ================== ALTERAÇÃO PRINCIPAL AQUI ==================
 @app.route('/api/titles')
 def get_titles():
-    if not TMDB_API_KEY: return jsonify({"error": "A chave da API do TMDb não foi configurada."}), 500
+    if not TMDB_API_KEY: 
+        return jsonify({"error": "A chave da API do TMDb não foi configurada."}), 500
+    
     try:
+        all_results = []
         endpoint = f"{TMDB_API_URL}/discover/tv"
-        params = {'api_key': TMDB_API_KEY, 'language': 'pt-BR', 'sort_by': 'popularity.desc', 'with_watch_providers': WATCH_PROVIDERS_STRING, 'watch_region': 'BR', 'page': 1}
-        response = requests.get(endpoint, params=params)
-        response.raise_for_status()
-        formatted_titles = [format_title_data(item, type_override='tv') for item in response.json().get('results', [])]
+        
+        # Faz a busca para a página 1
+        params_page1 = {
+            'api_key': TMDB_API_KEY, 
+            'language': 'pt-BR', 
+            'sort_by': 'popularity.desc', 
+            'with_watch_providers': WATCH_PROVIDERS_STRING, 
+            'watch_region': 'BR', 
+            'page': 1
+        }
+        response1 = requests.get(endpoint, params=params_page1)
+        response1.raise_for_status()
+        all_results.extend(response1.json().get('results', []))
+        
+        # Faz a busca para a página 2
+        params_page2 = params_page1.copy()
+        params_page2['page'] = 2
+        response2 = requests.get(endpoint, params=params_page2)
+        response2.raise_for_status()
+        all_results.extend(response2.json().get('results', []))
+
+        # Formata a lista combinada de resultados
+        formatted_titles = [format_title_data(item, type_override='tv') for item in all_results]
+        
         return jsonify({"titles": formatted_titles})
-    except Exception as e: return jsonify({"error": f"Ocorreu um erro: {e}"}), 500
+        
+    except Exception as e: 
+        return jsonify({"error": f"Ocorreu um erro: {e}"}), 500
+# =============================================================
 
 @app.route('/api/suggestions', methods=['POST'])
 def get_suggestions():
