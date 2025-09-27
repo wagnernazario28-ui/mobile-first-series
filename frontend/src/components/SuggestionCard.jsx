@@ -1,7 +1,6 @@
 // frontend/src/components/SuggestionCard.jsx
 
 import React from 'react';
-import CheckmarkIcon from './CheckmarkIcon';
 
 const serviceNames = {
     'netflix': 'Netflix',
@@ -13,16 +12,8 @@ const serviceNames = {
 };
 
 // ================== ALTERAÇÃO AQUI ==================
-// Adicionamos uma nova propriedade: 'onCardClick'.
-const SuggestionCard = React.forwardRef(({ item, onWatchedClick, onCardClick }, ref) => {
-    
-    const handleWatchedButtonClick = (e) => {
-        // O stopPropagation aqui é crucial para que, ao clicar no checkmark,
-        // ele não dispare o clique do card também.
-        e.stopPropagation();
-        onWatchedClick(item, e);
-    };
-
+// Removemos o botão do canto superior direito e mantemos apenas o clique no card.
+const SuggestionCard = React.forwardRef(({ item, onCardClick }, ref) => {
     return (
         // Adicionamos o evento onClick ao div principal do card.
         // Ele vai chamar a função que a HomeScreen nos passar.
@@ -45,11 +36,6 @@ const SuggestionCard = React.forwardRef(({ item, onWatchedClick, onCardClick }, 
                     {serviceNames[item.service] || 'Streaming'} - {item.type}
                 </p>
             </div>
-
-            <CheckmarkIcon 
-                className="checkmark-btn"
-                onClick={handleWatchedButtonClick}
-            />
         </div>
     );
 });

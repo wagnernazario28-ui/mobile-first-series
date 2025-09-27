@@ -1,30 +1,4 @@
-# Qwen Code Assistant Memory
-
-This file contains information and preferences remembered by the Qwen Code Assistant for this project.
-
-## Project Context
-- Date: sexta-feira, 26 de setembro de 2025
-- Operating System: win32
-- Project Directory: C:\mobile-first-series
-
-## Project Structure
-The project contains:
-- A backend directory with Python requirements and API
-- A frontend directory with a modern web setup (Vite, Tailwind CSS, ESLint)
-
-# Qwen Code Assistant Memory
-
-This file contains information and preferences remembered by the Qwen Code Assistant for this project.
-
-## Project Context
-- Date: sexta-feira, 26 de setembro de 2025
-- Operating System: win32
-- Project Directory: C:\mobile-first-series
-
-## Project Structure
-The project contains:
-- A backend directory with Python requirements and API
-- A frontend directory with a modern web setup (Vite, Tailwind CSS, ESLint)
+# Gemini AI
 
 ## Language Preference
 - Primary language for all conversations and code-related tasks: Portuguese (Português)
@@ -80,3 +54,5 @@ C: Aguardar Continuidade. Após entregar o código de um arquivo, aguarde o coma
 * Exemplo Flask: "Criei esta rota /sugestoes com o método POST porque ela precisa receber um corpo de dados (as preferências do usuário) para poder processar e retornar as sugestões."
 
 4.3. Transparência: A honestidade é fundamental. Nunca omita partes do código ou do processo.
+
+Preferencia pela lingua portugues em todas as converssas, explicações e quadros de tomada de decisões.
