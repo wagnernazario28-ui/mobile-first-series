@@ -6,7 +6,6 @@ import DetailsModal from './DetailsModal';
 
 const TMDB_LOGO_URL = 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg';
 
-// Mapeamento de identificadores para nomes de exibição dos serviços.
 const serviceNames = {
     'all': 'Todos',
     'netflix': 'Netflix',
@@ -16,38 +15,32 @@ const serviceNames = {
     'apple': 'Apple TV+',
     'globoplay': 'Globoplay'
 };
-// A ordem em que os botões de filtro aparecerão na tela.
 const filterOrder = ['all', 'netflix', 'prime', 'disney', 'max', 'apple', 'globoplay'];
 
 function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false); // Novo estado para carregamento de mais itens
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState(null);
-    const [itemToConfirm, setItemToConfirm] = useState(null); // Mantido caso seja necessário no futuro
-    const [toastPosition, setToastPosition] = useState({ top: 0, left: 0 }); // Mantido caso seja necessário no futuro
     const screenRef = useRef(null);
     const [selectedTitle, setSelectedTitle] = useState(null);
     const [detailsData, setDetailsData] = useState(null);
     const [isDetailsLoading, setIsDetailsLoading] = useState(false);
-    const [activeFilter, setActiveFilter] = useState('all'); // 'all' é o padrão.
-    const [hasMore, setHasMore] = useState(true); // Indicador se há mais páginas
-    const [page, setPage] = useState(1); // Contador de páginas
-    const [isFetching, setIsFetching] = useState(false); // Para evitar múltiplas chamadas simultâneas
-    const [processedIds, setProcessedIds] = useState(new Set()); // IDs que foram marcados como "Já Vi" ou "Não Gostei"
+    const [activeFilter, setActiveFilter] = useState('all');
+    const [hasMore, setHasMore] = useState(true);
+    const [page, setPage] = useState(1);
+    const [isFetching, setIsFetching] = useState(false);
+    const [processedIds, setProcessedIds] = useState(new Set());
     
-    // Recuperar IDs marcados como "Já Vi" ou "Não Gostei" do localStorage
     useEffect(() => {
         const watchedOrDislikedIds = JSON.parse(localStorage.getItem('watchedOrDislikedIds') || '[]');
         setProcessedIds(new Set(watchedOrDislikedIds));
     }, []);
 
-    // Atualizar o localStorage sempre que processedIds mudar
     useEffect(() => {
         localStorage.setItem('watchedOrDislikedIds', JSON.stringify(Array.from(processedIds)));
     }, [processedIds]);
 
-    // Função para buscar sugestões (tanto inicial quanto adicionais)
     const fetchSuggestions = async (pageNum = 1, append = false) => {
         if (!selectedIds || selectedIds.length === 0) {
             setLoading(false);
@@ -55,11 +48,8 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
             return;
         }
         
-        if (pageNum === 1 && !append) {
-            setLoading(true);
-        } else {
-            setLoadingMore(true);
-        }
+        if (pageNum === 1 && !append) setLoading(true);
+        else setLoadingMore(true);
         
         try {
             setError(null);
@@ -69,13 +59,12 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
                 body: JSON.stringify({ 
                     selected_ids: selectedIds,
                     page: pageNum,
-                    exclude_ids: Array.from(processedIds) // Excluir títulos já processados
+                    exclude_ids: Array.from(processedIds)
                 }),
             });
             if (!response.ok) throw new Error('A resposta da rede não foi bem-sucedida.');
             const data = await response.json();
             
-            // Filtrar títulos que já estão na lista ou já foram processados
             const filteredSuggestions = data.suggestions.filter(suggestion => 
                 !processedIds.has(suggestion.id) && 
                 !suggestions.some(existing => existing.id === suggestion.id)
@@ -84,22 +73,13 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
             if (append) {
                 setSuggestions(prev => [...prev, ...filteredSuggestions]);
             } else {
-                // Garantir que mantenhamos as sugestões existentes até que as novas sejam carregadas com sucesso
-                // e que não substituímos com uma lista vazia se a anterior não estava vazia
-                if (pageNum === 1 && !append && filteredSuggestions.length === 0 && suggestions.length > 0) {
-                    // Mantém as sugestões atuais se a nova chamada retornar vazia mas tínhamos dados antes
-                    console.warn("A API retornou uma lista vazia, mantendo as sugestões atuais.");
-                } else {
-                    setSuggestions(filteredSuggestions);
-                }
+                setSuggestions(filteredSuggestions);
             }
             
             setHasMore(data.has_more);
             setPage(data.current_page);
         } catch (err) {
             setError(err.message);
-            // Em caso de erro, manter as sugestões existentes
-            console.error("Erro ao buscar sugestões:", err);
         } finally {
             if (pageNum === 1 && !append) {
                 setLoading(false);
@@ -111,10 +91,8 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         }
     };
 
-    // Função para buscar novas recomendações baseadas em um título assistido
     const fetchNewSuggestionsBasedOnWatched = async (watchedItem) => {
         try {
-            // Buscar recomendações diretamente baseadas no título assistido
             const response = await fetch(`http://127.0.0.1:5000/api/recommendations/${watchedItem.id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -122,15 +100,11 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
                     exclude_ids: Array.from(new Set([...processedIds, ...suggestions.map(s => s.id)]))
                 })
             });
-            if (!response.ok) {
-                throw new Error('Falha ao buscar recomendações baseadas no título assistido');
-            }
+            if (!response.ok) throw new Error('Falha ao buscar recomendações baseadas no título assistido');
             
             const recommendations = await response.json();
             
-            // Atualizar a lista de sugestões para incluir as novas baseadas no título assistido
             setSuggestions(prev => {
-                // Filtrar duplicatas, títulos já processados e títulos já existentes na lista
                 const newUniqueSuggestions = recommendations.filter(
                     newSuggestion => 
                         !prev.some(prevSuggestion => prevSuggestion.id === newSuggestion.id) &&
@@ -141,11 +115,9 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
             
         } catch (err) {
             console.error("Erro ao buscar novas recomendações:", err);
-            // Em caso de erro, apenas remover o título assistido da lista
         }
     };
 
-    // Carregar sugestões iniciais
     useEffect(() => {
         if (selectedIds && selectedIds.length > 0) {
             fetchSuggestions(1, false);
@@ -155,7 +127,6 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         }
     }, [selectedIds, onInitialLoadComplete]);
 
-    // Função para carregar mais sugestões quando o usuário rolar
     const loadMoreSuggestions = () => {
         if (hasMore && !isFetching) {
             setIsFetching(true);
@@ -163,27 +134,19 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         }
     };
 
-    // Efeito para detectar quando o usuário está perto do final da página
     useEffect(() => {
         const handleScroll = () => {
             if (!screenRef.current || loading || loadingMore) return;
-            
             const { scrollTop, scrollHeight, clientHeight } = screenRef.current;
-            // Se o usuário estiver a 200px do final da página, carregar mais
             if (scrollTop + clientHeight >= scrollHeight - 200 && hasMore && !isFetching) {
                 loadMoreSuggestions();
             }
         };
 
         const currentRef = screenRef.current;
-        if (currentRef) {
-            currentRef.addEventListener('scroll', handleScroll);
-        }
-
+        if (currentRef) currentRef.addEventListener('scroll', handleScroll);
         return () => {
-            if (currentRef) {
-                currentRef.removeEventListener('scroll', handleScroll);
-            }
+            if (currentRef) currentRef.removeEventListener('scroll', handleScroll);
         };
     }, [loading, loadingMore, hasMore, isFetching]);
 
@@ -194,13 +157,8 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         try {
             const mediaType = item.type === 'Série' ? 'tv' : 'movie';
             const response = await fetch(`http://127.0.0.1:5000/api/details/${mediaType}/${item.id}`);
-            if (!response.ok) {
-                setDetailsData(null);
-            } else {
-                const data = await response.json();
-                console.log('Dados recebidos da API:', data); // Linha de debug para verificar o conteúdo
-                setDetailsData(data);
-            }
+            const data = await response.json();
+            setDetailsData(response.ok ? data : null);
         } catch (err) {
             console.error("Erro ao buscar detalhes:", err);
             setDetailsData(null);
@@ -214,23 +172,14 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         setDetailsData(null);
     };
 
-    // Funções para lidar com as ações no modal de detalhes
     const handleMarkAsWatched = (item) => {
-        // Adicionar o título aos IDs processados
         setProcessedIds(prev => new Set([...prev, item.id]));
-        
-        // Adicionar o título assistido às preferências e buscar novas recomendações
         fetchNewSuggestionsBasedOnWatched(item);
-        
-        // Remover o item da lista de sugestões atuais
         setSuggestions(prev => prev.filter(s => s.id !== item.id));
     };
     
     const handleDislike = async (item) => {
-        // Adicionar o título aos IDs processados
         setProcessedIds(prev => new Set([...prev, item.id]));
-        
-        // Processar o título não gostado no backend para refinar recomendações futuras
         try {
             await fetch('http://127.0.0.1:5000/api/disliked_titles', {
                 method: 'POST',
@@ -240,78 +189,77 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
         } catch (error) {
             console.error("Erro ao processar título não gostado:", error);
         }
-        
-        // Remover o item da lista de sugestões
         setSuggestions(prev => prev.filter(s => s.id !== item.id));
     };
 
-    // Filtra a lista de sugestões com base no filtro ativo
     const filteredSuggestions = activeFilter === 'all'
         ? suggestions
         : suggestions.filter(item => item.service === activeFilter);
 
-    if (loading) {
-        return <div className="flex justify-center items-center h-full text-white">Carregando sugestões...</div>;
-    }
-
+    if (loading) return <div className="flex justify-center items-center h-full text-white">Carregando sugestões...</div>;
     if (error) return <div className="flex justify-center items-center h-full text-red-500">Erro: {error}</div>;
 
+    // ================== ALTERAÇÃO ESTRUTURAL PRINCIPAL ==================
+    // 1. O container principal agora só serve para posicionamento ('relative h-full').
+    // 2. O conteúdo que rola fica dentro de um 'div' separado com a ref e a classe 'scrollable-content'.
+    // 3. O 'DetailsModal' agora é um "irmão" do conteúdo de rolagem, não um "filho".
+    //    Isso o desvincula da rolagem e o posiciona em relação à tela inteira do app.
     return (
-        <div ref={screenRef} className="scrollable-content relative h-full">
-            <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-white">Sua Home</h2>
-                    <button onClick={onRefine} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-3 rounded-full">
-                        Refinar Gosto
-                    </button>
-                </div>
-
-                {/* Renderização dos botões de filtro */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                    {filterOrder.map(filterKey => (
-                        <button 
-                            key={filterKey}
-                            onClick={() => setActiveFilter(filterKey)}
-                            className={`service-filter-btn font-semibold py-1 px-3 rounded-full ${activeFilter === filterKey ? 'active' : ''}`}
-                        >
-                            {serviceNames[filterKey]}
+        <div className="relative h-full">
+            <div ref={screenRef} className="scrollable-content h-full">
+                <div className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-white">Sua Home</h2>
+                        <button onClick={onRefine} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-3 rounded-full">
+                            Refinar Gosto
                         </button>
-                    ))}
-                </div>
-
-                <h3 className="text-lg font-bold text-white mb-4">Recomendado para Você</h3>
-                
-                {filteredSuggestions.length === 0 ? (
-                    <div className="text-center text-slate-400 py-10">
-                        <p>
-                            {suggestions.length > 0
-                                ? `Nenhuma sugestão encontrada para o filtro "${serviceNames[activeFilter]}".`
-                                : "Não encontramos sugestões com base na sua seleção."
-                            }
-                        </p>
-                        <p className="mt-2">Tente refinar seu gosto ou selecionar outro filtro.</p>
                     </div>
-                ) : (
-                    <div id="catalog-grid" className="grid grid-cols-2 gap-4">
-                        {filteredSuggestions.map(item => (
-                            <SuggestionCard 
-                                key={`${item.id}-${item.service}`}
-                                item={item} 
-                                onCardClick={handleCardClick}
-                            />
+
+                    <div className="flex flex-wrap gap-2 mb-6">
+                        {filterOrder.map(filterKey => (
+                            <button 
+                                key={filterKey}
+                                onClick={() => setActiveFilter(filterKey)}
+                                className={`service-filter-btn font-semibold py-1 px-3 rounded-full ${activeFilter === filterKey ? 'active' : ''}`}
+                            >
+                                {serviceNames[filterKey]}
+                            </button>
                         ))}
                     </div>
-                )}
-                
-                {/* Indicador de carregamento para mais itens */}
-                {loadingMore && (
-                    <div className="flex justify-center my-6">
-                        <div className="load-more-spinner"></div>
+
+                    <h3 className="text-lg font-bold text-white mb-4">Recomendado para Você</h3>
+                    
+                    {filteredSuggestions.length === 0 ? (
+                        <div className="text-center text-slate-400 py-10">
+                            <p>
+                                {suggestions.length > 0
+                                    ? `Nenhuma sugestão encontrada para o filtro "${serviceNames[activeFilter]}".`
+                                    : "Não encontramos sugestões com base na sua seleção."
+                                }
+                            </p>
+                            <p className="mt-2">Tente refinar seu gosto ou selecionar outro filtro.</p>
+                        </div>
+                    ) : (
+                        <div id="catalog-grid" className="grid grid-cols-2 gap-4">
+                            {filteredSuggestions.map(item => (
+                                <SuggestionCard 
+                                    key={`${item.id}-${item.service}`}
+                                    item={item} 
+                                    onCardClick={handleCardClick}
+                                />
+                            ))}
+                        </div>
+                    )}
+                    
+                    {loadingMore && (
+                        <div className="flex justify-center my-6">
+                            <div className="load-more-spinner"></div>
+                        </div>
+                    )}
+                    
+                    <div className="flex justify-center pt-8 pb-4">
+                        <img src={TMDB_LOGO_URL} alt="The Movie Database" className="w-48 h-auto opacity-50" />
                     </div>
-                )}
-                
-                <div className="flex justify-center pt-8 pb-4">
-                    <img src={TMDB_LOGO_URL} alt="The Movie Database" className="w-48 h-auto opacity-50" />
                 </div>
             </div>
 
@@ -323,7 +271,6 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
                 isLoading={isDetailsLoading}
                 onMarkAsWatched={handleMarkAsWatched}
                 onDislike={handleDislike}
-                scrollContainerRef={screenRef}
             />
         </div>
     );
