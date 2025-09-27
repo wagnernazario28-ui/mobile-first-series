@@ -8,11 +8,11 @@ const LoadingSpinner = () => (
     </div>
 );
 
-// ================== ALTERAÇÃO PRINCIPAL ==================
-// 1. A prop 'scrollTop' foi removida. Não precisamos mais dela.
 function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMarkAsWatched, onDislike }) {
-    const [showWatchedConfirmation, setShowWatchedConfirmation] = useState(false);
-    const [isAddingNewSuggestion, setIsAddingNewSuggestion] = useState(false);
+    // ================== ALTERAÇÃO 1 ==================
+    // Os estados relacionados à confirmação foram removidos, pois não são mais necessários.
+    // const [showWatchedConfirmation, setShowWatchedConfirmation] = useState(false);
+    // const [isAddingNewSuggestion, setIsAddingNewSuggestion] = useState(false);
 
     useEffect(() => {
         if (isVisible) {
@@ -27,7 +27,6 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
         return null;
     }
 
-    // A classe 'items-end' garante que o modal sempre aparecerá na parte de baixo da tela.
     const overlayClasses = isVisible
         ? "absolute inset-0 bg-black/80 z-50 flex items-end justify-center"
         : "hidden";
@@ -36,30 +35,24 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
         ? `https://www.youtube.com/watch?v=${details.trailer_key}`
         : null;
 
+    // ================== ALTERAÇÃO 2 ==================
+    // A função agora executa a ação diretamente, sem abrir um pop-up de confirmação.
     const handleMarkAsWatched = () => {
-        setShowWatchedConfirmation(true);
-    };
-
-    const handleConfirmWatched = async () => {
-        setIsAddingNewSuggestion(true);
-        try {
-            onMarkAsWatched(baseTitle);
-            const watchedOrDislikedIds = JSON.parse(localStorage.getItem('watchedOrDislikedIds') || '[]');
-            if (!watchedOrDislikedIds.includes(baseTitle.id)) {
-                watchedOrDislikedIds.push(baseTitle.id);
-                localStorage.setItem('watchedOrDislikedIds', JSON.stringify(watchedOrDislikedIds));
-            }
-        } catch (error) {
-            console.error("Erro ao processar título assistido:", error);
+        // Chama a função principal passada pelo HomeScreen
+        onMarkAsWatched(baseTitle);
+        
+        // Adiciona o ID ao localStorage para não mostrá-lo novamente
+        const watchedOrDislikedIds = JSON.parse(localStorage.getItem('watchedOrDislikedIds') || '[]');
+        if (!watchedOrDislikedIds.includes(baseTitle.id)) {
+            watchedOrDislikedIds.push(baseTitle.id);
+            localStorage.setItem('watchedOrDislikedIds', JSON.stringify(watchedOrDislikedIds));
         }
-        setIsAddingNewSuggestion(false);
-        setShowWatchedConfirmation(false);
+        
+        // Fecha o modal
         onClose();
     };
 
-    const handleCancelWatched = () => {
-        setShowWatchedConfirmation(false);
-    };
+    // As funções 'handleConfirmWatched' e 'handleCancelWatched' foram removidas.
 
     const handleDislike = () => {
         onDislike(baseTitle);
@@ -72,7 +65,6 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
     };
 
     return (
-        // 2. O estilo inline 'style={{...}}' foi removido.
         <div
             className={overlayClasses}
             onClick={onClose}
@@ -138,11 +130,13 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
                                 )}
                                 
                                 <div className="grid grid-cols-2 gap-3">
+                                    {/* ================== ALTERAÇÃO 3 ================== */}
+                                    {/* O texto do botão foi alterado para "Já assisti". */}
                                     <button
                                         onClick={handleMarkAsWatched}
                                         className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm"
                                     >
-                                        Já Vi
+                                        Já Assisti
                                     </button>
                                     <button
                                         onClick={handleDislike}
@@ -156,36 +150,8 @@ function DetailsModal({ isVisible, onClose, details, isLoading, baseTitle, onMar
                     </div>
                 </div>
                 
-                {showWatchedConfirmation && (
-                    <div className="absolute inset-0 bg-black/80 z-30 flex items-center justify-center p-4">
-                        <div className="bg-[#1e293b] rounded-2xl w-full max-w-[340px] mx-auto p-4 border border-slate-700">
-                            <h3 className="text-base font-bold text-white mb-2 text-center">Adicionar à sua Home?</h3>
-                            <p className="text-slate-300 text-sm mb-4 text-center">
-                                Você assistiu a "{baseTitle.title}". Buscaremos uma nova recomendação com base nesse título para você.
-                            </p>
-                            
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    onClick={handleCancelWatched}
-                                    className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-3 rounded-lg text-sm"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={handleConfirmWatched}
-                                    disabled={isAddingNewSuggestion}
-                                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-bold py-2 px-3 rounded-lg text-sm flex items-center justify-center"
-                                >
-                                    {isAddingNewSuggestion ? (
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    ) : (
-                                        "Confirmar"
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* ================== ALTERAÇÃO 4 ================== */}
+                {/* O JSX do modal de confirmação foi completamente removido. */}
             </div>
         </div>
     );

@@ -199,20 +199,14 @@ function HomeScreen({ selectedIds, onRefine, onInitialLoadComplete }) {
     if (loading) return <div className="flex justify-center items-center h-full text-white">Carregando sugestões...</div>;
     if (error) return <div className="flex justify-center items-center h-full text-red-500">Erro: {error}</div>;
 
-    // ================== ALTERAÇÃO ESTRUTURAL PRINCIPAL ==================
-    // 1. O container principal agora só serve para posicionamento ('relative h-full').
-    // 2. O conteúdo que rola fica dentro de um 'div' separado com a ref e a classe 'scrollable-content'.
-    // 3. O 'DetailsModal' agora é um "irmão" do conteúdo de rolagem, não um "filho".
-    //    Isso o desvincula da rolagem e o posiciona em relação à tela inteira do app.
     return (
         <div className="relative h-full">
             <div ref={screenRef} className="scrollable-content h-full">
                 <div className="p-6">
+                    {/* ================== ALTERAÇÃO PRINCIPAL AQUI ================== */}
+                    {/* O botão "Refinar Gosto" foi removido daqui.                 */}
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-bold text-white">Sua Home</h2>
-                        <button onClick={onRefine} className="text-xs bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-3 rounded-full">
-                            Refinar Gosto
-                        </button>
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-6">

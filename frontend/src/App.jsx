@@ -1,33 +1,37 @@
 // frontend/src/App.jsx
 
-import React, { useState } from 'react';
+// 1. IMPORTAMOS O 'useCallback' DO REACT
+import React, { useState, useCallback } from 'react';
 import WelcomeScreen from './components/WelcomeScreen';
 import SeriesSelectorScreen from './components/SeriesSelectorScreen';
 import HomeScreen from './components/HomeScreen';
-import LoadingOverlay from './components/LoadingOverlay'; // 1. IMPORTAMOS O NOVO COMPONENTE
+import LoadingOverlay from './components/LoadingOverlay';
 import './App.css';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('welcome');
   const [selectedIds, setSelectedIds] = useState([]);
-  // 2. ADICIONAMOS O NOVO ESTADO PARA CONTROLAR O OVERLAY DE CARREGAMENTO
   const [isInitialLoading, setIsInitialLoading] = useState(false);
 
   const handleStart = () => {
     setCurrentScreen('selection');
   };
 
-  // 3. ATUALIZAMOS A FUNÇÃO PARA ATIVAR O CARREGAMENTO
   const handleSelectionComplete = (ids) => {
     setSelectedIds(ids);
     setCurrentScreen('home');
-    setIsInitialLoading(true); // Ativa a tela de loading
+    setIsInitialLoading(true);
   };
 
-  // 4. CRIAMOS A FUNÇÃO QUE SERÁ CHAMADA PELA HOMESCREEN QUANDO ELA TERMINAR
-  const handleInitialLoadComplete = () => {
-    setIsInitialLoading(false); // Desativa a tela de loading
-  };
+  // ================== ALTERAÇÃO PRINCIPAL AQUI ==================
+  // 2. ENVOLVEMOS A FUNÇÃO COM 'useCallback'.
+  // O array de dependências vazio `[]` garante que esta função
+  // seja criada apenas UMA VEZ durante todo o ciclo de vida do componente.
+  // Agora, ela não será mais a causa de um re-render desnecessário na HomeScreen.
+  const handleInitialLoadComplete = useCallback(() => {
+    setIsInitialLoading(false);
+  }, []);
+  // =============================================================
 
   const handleRefineTaste = () => {
     setCurrentScreen('selection');
@@ -38,7 +42,7 @@ function App() {
       case 'selection':
         return <SeriesSelectorScreen onSelectionComplete={handleSelectionComplete} />;
       case 'home':
-        // 5. PASSAMOS A NOVA FUNÇÃO COMO PROP PARA A HOMESCREEN
+        // A prop passada para a HomeScreen agora é estável.
         return (
           <HomeScreen
             selectedIds={selectedIds}
@@ -57,8 +61,6 @@ function App() {
       <main className="w-[390px] h-[844px] rounded-[30px] shadow-2xl overflow-hidden mobile-screen">
         {renderCurrentScreen()}
 
-        {/* 6. RENDERIZAMOS O OVERLAY CONDICIONALMENTE */}
-        {/* Ele só aparecerá se 'isInitialLoading' for verdadeiro */}
         {isInitialLoading && (
           <LoadingOverlay message="Aguarde, estamos preparando tudo para você..." />
         )}
